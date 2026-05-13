@@ -1,16 +1,26 @@
 backend/.env
+
+# Python cache files
 /__pycache__/
 __pyache__
 __pycache__/
-backend/app/.DS_Store
+
+# Virtual environments
 .venv/
 /.venv/
-venv
+venv/
+
+# macOS system files
 .DS_Store
+backend/app/.DS_Store
+
+# Build folders
 /build/
 
+# Firebase credentials
 firebase_key.json
 
+# Android / Gradle files
 gradle-wrapper.jar
 /.gradle
 /captures/
