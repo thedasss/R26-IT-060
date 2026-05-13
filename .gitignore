@@ -8,6 +8,8 @@ backend/app/.DS_Store
 .DS_Store
 /build/
 
+firebase_key.json
+
 gradle-wrapper.jar
 /.gradle
 /captures/
