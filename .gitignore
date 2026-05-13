@@ -5,6 +5,7 @@ __pycache__/
 backend/app/.DS_Store
 .venv/
 /.venv/
+venv
 .DS_Store
 /build/
 
