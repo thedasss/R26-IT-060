@@ -31,7 +31,7 @@ Allows users to virtually try clothing using a lightweight 2D approach and provi
 
 ---
 
-### Smart Inventory & Stock Flow Optimization ⭐
+### Smart Inventory & Stock Flow Optimization 
 Predicts product demand using machine learning (XGBoost) and provides intelligent stock management and restocking recommendations.
 
 ---
@@ -43,7 +43,55 @@ Analyzes customer data to predict effective promotions, evaluate campaigns, and 
 
 ## System Architecture
 
-![System Architecture](docs/architecture.png)
+                 ┌────────────────────────────┐
+                 │       Data Sources         │
+                 │----------------------------│
+                 │ • POS Transactions         │
+                 │ • Customer Data            │
+                 │ • Product Data             │
+                 │ • Promotion Data           │
+                 └────────────┬───────────────┘
+                              ↓
+                 ┌────────────────────────────┐
+                 │     Backend / API Layer    │
+                 │----------------------------│
+                 │ • Flask / FastAPI          │
+                 │ • Data Processing          │
+                 │ • API Integration          │
+                 └────────────┬───────────────┘
+                              ↓
+     ┌────────────────────────────────────────────────────┐
+     │              AI & Processing Layer                 │
+     │----------------------------------------------------│
+     │ 1. GPS Behaviour Tracking & Staff Assistance       │
+     │ 2. Virtual Try-On & Size Recommendation (AI)       │
+     │ 3. Demand Forecasting (XGBoost)                  │
+     │ 4. Marketing Intelligence (XGBoost + AI Posters)   │
+     └────────────┬───────────────────────────────────────┘
+                  ↓
+        ┌────────────────────────────┐
+        │   Data Storage Layer       │
+        │----------------------------│
+        │ • Database (MySQL/Firebase)│
+        │ • Model Outputs            │
+        └────────────┬───────────────┘
+                     ↓
+        ┌────────────────────────────┐
+        │   Frontend / Dashboard     │
+        │----------------------------│
+        │ • Admin Dashboard          │
+        │ • Marketing Dashboard      │
+        │ • Smart UI (Try-On)        │
+        └────────────┬───────────────┘
+                     ↓
+        ┌────────────────────────────┐
+        │      Final Outputs         │
+        │----------------------------│
+        │ • Customer Insights        │
+        │ • Demand Predictions       │
+        │ • Promotion Strategies     │
+        │ • Staff Alerts             │
+        └────────────────────────────┘
 
 ---
 
