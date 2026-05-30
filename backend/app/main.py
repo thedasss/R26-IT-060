@@ -1,6 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from app.routes import zone
+from app.routes import profile
+from app.routes import tryon
+from app.routes import inventory
 
 app = FastAPI()
 
@@ -13,6 +18,11 @@ app.add_middleware(
 )
 
 app.include_router(zone.router, prefix="/zone", tags=["Zone"])
+app.include_router(profile.router, prefix="/profile", tags=["Profile"])
+app.include_router(tryon.router, prefix="/tryon", tags=["Try On"])
+app.include_router(inventory.router, prefix="/inventory", tags=["Inventory"])
+
+app.mount("/generated", StaticFiles(directory="generated"), name="generated")
 
 @app.get("/")
 def root():
