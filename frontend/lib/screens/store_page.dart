@@ -1,53 +1,65 @@
 import 'package:flutter/material.dart';
+import 'create_zone_page.dart';
+import 'identify_zone_page.dart';
+import 'view_zones_page.dart';
 
 class StorePage extends StatelessWidget {
   const StorePage({super.key});
+
+  Widget _menuButton({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Widget page,
+  }) {
+    return Card(
+      elevation: 3,
+      margin: const EdgeInsets.only(bottom: 16),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: Icon(icon, size: 36, color: Colors.blue),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.arrow_forward_ios),
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        title: const Text("Store"),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black,
-      ),
-      body: Center(
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          margin: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              )
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.store, size: 60, color: Color(0xFF2563EB)),
-              SizedBox(height: 16),
-              Text(
-                "Store Mode",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                "This is the store interface",
-                style: TextStyle(color: Colors.black54),
-              ),
-            ],
-          ),
+      appBar: AppBar(title: const Text("Store Dashboard"), centerTitle: true),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            _menuButton(
+              context: context,
+              icon: Icons.add_location_alt,
+              title: "Create Zone",
+              subtitle: "Create a zone using 4 location points",
+              page: const CreateZonePage(),
+            ),
+            _menuButton(
+              context: context,
+              icon: Icons.my_location,
+              title: "Identify Zone",
+              subtitle: "Check which zone a location belongs to",
+              page: const IdentifyZonePage(),
+            ),
+            _menuButton(
+              context: context,
+              icon: Icons.map,
+              title: "View Zones",
+              subtitle: "View and delete stored zones",
+              page: const ViewZonesPage(),
+            ),
+          ],
         ),
       ),
     );

@@ -34,10 +34,7 @@ class ApiService {
     final response = await http.post(
       Uri.parse("$baseUrl/profile/login"),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "email": email,
-        "password": password,
-      }),
+      body: jsonEncode({"email": email, "password": password}),
     );
 
     return _handleResponse(response);
@@ -110,7 +107,8 @@ class ApiService {
   }
 
   static Map<String, dynamic> _handleResponse(http.Response response) {
-    final decoded = response.body.isNotEmpty &&
+    final decoded =
+        response.body.isNotEmpty &&
             response.headers["content-type"]?.contains("application/json") ==
                 true
         ? jsonDecode(response.body)

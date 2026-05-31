@@ -23,6 +23,7 @@ app.include_router(tryon.router, prefix="/tryon", tags=["Try On"])
 app.include_router(inventory.router, prefix="/inventory", tags=["Inventory"])
 
 app.mount("/generated", StaticFiles(directory="generated"), name="generated")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
 def root():
