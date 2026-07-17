@@ -1,9 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
 class ApiService {
-  static const String baseUrl = "http://127.0.0.1:8000";
+  static const String baseUrl = "http://0.0.0.0:8000";
 
   static Future<Map<String, dynamic>> createProfile({
     required String email,
@@ -34,10 +35,7 @@ class ApiService {
     final response = await http.post(
       Uri.parse("$baseUrl/profile/login"),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "email": email,
-        "password": password,
-      }),
+      body: jsonEncode({"email": email, "password": password}),
     );
 
     return _handleResponse(response);
@@ -77,7 +75,8 @@ class ApiService {
 
   static Future<Map<String, dynamic>> generateTryOn({
     required XFile humanImage,
-    required XFile clothImage,
+    XFile? clothImage,
+    Uint8List? clothBytes,
   }) async {
     final request = http.MultipartRequest(
       "POST",
@@ -85,7 +84,6 @@ class ApiService {
     );
 
     final humanBytes = await humanImage.readAsBytes();
-    final clothBytes = await clothImage.readAsBytes();
 
     request.files.add(
       http.MultipartFile.fromBytes(
@@ -95,13 +93,26 @@ class ApiService {
       ),
     );
 
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        "cloth_image",
-        clothBytes,
-        filename: clothImage.name,
-      ),
-    );
+    if (clothImage != null) {
+      final bytes = await clothImage.readAsBytes();
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          "cloth_image",
+          bytes,
+          filename: clothImage.name,
+        ),
+      );
+    } else if (clothBytes != null) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          "cloth_image",
+          clothBytes,
+          filename: "product.png",
+        ),
+      );
+    } else {
+      throw Exception("No clothing image or product bytes provided");
+    }
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
@@ -109,8 +120,15 @@ class ApiService {
     return _handleResponse(response);
   }
 
+  static Future<List<dynamic>> getProducts() async {
+    final response = await http.get(Uri.parse("$baseUrl/products"));
+    final decoded = _handleResponse(response);
+    return decoded["products"] ?? [];
+  }
+
   static Map<String, dynamic> _handleResponse(http.Response response) {
-    final decoded = response.body.isNotEmpty &&
+    final decoded =
+        response.body.isNotEmpty &&
             response.headers["content-type"]?.contains("application/json") ==
                 true
         ? jsonDecode(response.body)

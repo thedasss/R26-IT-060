@@ -1,15 +1,26 @@
 backend/.env
+
+# Python cache files
 /__pycache__/
 __pyache__
 __pycache__/
-backend/app/.DS_Store
+
+# Virtual environments
 .venv/
 /.venv/
+venv/
+
+# macOS system files
 .DS_Store
+backend/app/.DS_Store
+
+# Build folders
 /build/
 
+# Firebase credentials
 firebase_key.json
 
+# Android / Gradle files
 gradle-wrapper.jar
 /.gradle
 /captures/
@@ -18,6 +29,8 @@ gradle-wrapper.jar
 /local.properties
 GeneratedPluginRegistrant.java
 .cxx/
+hashes/
+.png
 
 # Remember to never publicly share your keystore.
 # See https://flutter.dev/to/reference-keystore
