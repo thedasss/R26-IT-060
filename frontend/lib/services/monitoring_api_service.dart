@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class MonitoringApiService {
-  static const String baseUrl = "http://192.168.1.5:8000";
+  static const String baseUrl = "https://r26-it-060.onrender.com";
 
   static Future<Map<String, dynamic>> startMonitoring({
     required String customerId,
@@ -75,6 +75,17 @@ class MonitoringApiService {
     final response = await http.post(
       Uri.parse("$baseUrl/monitoring/resolve/$requestId"),
       headers: {"Content-Type": "application/json"},
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> requestManualAssistance(
+    String customerId,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/monitoring/manual-assist"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"customer_id": customerId}),
     );
     return jsonDecode(response.body);
   }

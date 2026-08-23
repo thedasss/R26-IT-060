@@ -1,8 +1,11 @@
 from fastapi import APIRouter, HTTPException
-from firebase_admin import firestore
+from firebase_admin import firestore, auth
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 from app.models.profile import ProfileCreateRequest, ProfileUpdateRequest
-from app.models.auth import LoginRequest
+from app.models.auth import LoginRequest, GoogleLoginRequest
+from pydantic import BaseModel
 from app.services.profile_service import get_size
 from app.services.auth_service import hash_password, verify_password
 from app.services.jwt_service import create_access_token
@@ -27,24 +30,41 @@ def create_profile(data: ProfileCreateRequest):
 
     recommended_size = get_size(data.height, data.weight)
 
-    body_measurements = predict_body_measurements(
-        height=data.height,
-        gender=data.gender,
-    )
+    try:
+        body_measurements = predict_body_measurements(
+            height=data.height,
+            weight=data.weight,
+            gender=data.gender,
+        )
+    except Exception as e:
+        import traceback
+        return {
+            "error_caught": True,
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }
 
-    profile_data = {
-        "email": data.email,
-        "hashed_password": hash_password(data.password),
-        "height": data.height,
-        "weight": data.weight,
-        "gender": data.gender,
-        "recommended_size": recommended_size,
-        "predicted_shoulder_width": body_measurements["predicted_shoulder_width"],
-        "predicted_waist": body_measurements["predicted_waist"],
-        "predicted_leg_length": body_measurements["predicted_leg_length"],
-        "created_at": firestore.SERVER_TIMESTAMP,
-        "updated_at": firestore.SERVER_TIMESTAMP,
-    }
+    try:
+        profile_data = {
+            "email": data.email,
+            "hashed_password": hash_password(data.password),
+            "height": data.height,
+            "weight": data.weight,
+            "gender": data.gender,
+            "recommended_size": recommended_size,
+            "predicted_shoulder_width": body_measurements["predicted_shoulder_width"],
+            "predicted_waist": body_measurements["predicted_waist"],
+            "predicted_leg_length": body_measurements["predicted_leg_length"],
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "error_caught": True,
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }
 
     doc_ref = db.collection("profiles").add(profile_data)
 
@@ -59,28 +79,94 @@ def create_profile(data: ProfileCreateRequest):
 
 @router.post("/login")
 def login(data: LoginRequest):
-    docs = db.collection("profiles").where("email", "==", data.email).stream()
+    try:
+        docs = db.collection("profiles").where("email", "==", data.email).stream()
 
+        user_doc = None
+        user_data = None
+
+        for doc in docs:
+            user_doc = doc
+            user_data = doc.to_dict()
+            break
+
+        if not user_data:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        if not verify_password(data.password, user_data["hashed_password"]):
+            raise HTTPException(status_code=401, detail="Invalid password")
+
+        access_token = create_access_token({
+            "sub": user_data["email"],
+            "profile_id": user_doc.id,
+        })
+
+        return {
+            "message": "Login successful",
+            "access_token": access_token,
+            "token_type": "bearer",
+            "profile_id": user_doc.id,
+            "email": user_data["email"],
+            "recommended_size": user_data.get("recommended_size"),
+            "body_measurements": {
+                "predicted_shoulder_width": user_data.get("predicted_shoulder_width"),
+                "predicted_waist": user_data.get("predicted_waist"),
+                "predicted_leg_length": user_data.get("predicted_leg_length"),
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        return {
+            "error_caught": True,
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+@router.post("/google-login")
+def google_login(data: GoogleLoginRequest):
+    try:
+        decoded_token = id_token.verify_oauth2_token(
+            data.id_token, 
+            requests.Request(),
+            audience=[
+                "171031337876-v1l7ha3nheuim0ijdh2f6paaqfkbdlie.apps.googleusercontent.com",  # Web client
+                "171031337876-jfru9mjtq8ua2bqkhb7pplv00nf66b1i.apps.googleusercontent.com",  # iOS client
+            ]
+        )
+        email = decoded_token.get("email")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid Google token: {e}")
+
+    if not email:
+        raise HTTPException(status_code=400, detail="No email found in Google token")
+
+    docs = db.collection("profiles").where("email", "==", email).stream()
+    
     user_doc = None
     user_data = None
-
     for doc in docs:
         user_doc = doc
         user_data = doc.to_dict()
         break
 
     if not user_data:
-        raise HTTPException(status_code=404, detail="Account not found")
-
-    if not verify_password(data.password, user_data["hashed_password"]):
-        raise HTTPException(status_code=401, detail="Invalid password")
-
+        # The user successfully verified via Google, but has no sizing profile.
+        # We return a flag telling the frontend to redirect to GoogleSetupPage.
+        return {
+            "requires_setup": True,
+            "email": email,
+            "message": "Account verified via Google, but body measurements are missing."
+        }
+    
     access_token = create_access_token({
         "sub": user_data["email"],
         "profile_id": user_doc.id,
     })
 
     return {
+        "requires_setup": False,
         "message": "Login successful",
         "access_token": access_token,
         "token_type": "bearer",
@@ -179,22 +265,23 @@ def update_profile(profile_id: str, data: ProfileUpdateRequest):
     if "height" in update_data or "weight" in update_data or "gender" in update_data:
         new_height = update_data.get("height", old_data.get("height"))
         new_weight = update_data.get("weight", old_data.get("weight"))
-        new_gender = update_data.get("gender", old_data.get("gender"))
+        new_gender = update_data.get("gender", old_data.get("gender")) or "Unisex"
 
-        update_data["recommended_size"] = get_size(new_height, new_weight)
-
-        body_measurements = predict_body_measurements(
-            height=new_height,
-            gender=new_gender,
-        )
-
-        update_data["predicted_shoulder_width"] = body_measurements[
-            "predicted_shoulder_width"
-        ]
-        update_data["predicted_waist"] = body_measurements["predicted_waist"]
-        update_data["predicted_leg_length"] = body_measurements[
-            "predicted_leg_length"
-        ]
+        if new_height is not None and new_weight is not None:
+            try:
+                update_data["recommended_size"] = get_size(new_height, new_weight)
+                
+                body_measurements = predict_body_measurements(
+                    height=new_height,
+                    weight=new_weight,
+                    gender=new_gender,
+                )
+                
+                update_data["predicted_shoulder_width"] = body_measurements["predicted_shoulder_width"]
+                update_data["predicted_waist"] = body_measurements["predicted_waist"]
+                update_data["predicted_leg_length"] = body_measurements["predicted_leg_length"]
+            except Exception as e:
+                print(f"Warning: ML sizing failed during profile update: {e}")
 
     if not update_data:
         raise HTTPException(status_code=400, detail="No data provided to update")
@@ -236,3 +323,15 @@ def delete_profile(profile_id: str):
         "message": "Profile deleted successfully",
         "profile_id": profile_id,
     }
+
+
+class BrandSizingRequest(BaseModel):
+    standard_size: str
+    brand: str
+    category: str
+
+@router.post("/predict_brand_size")
+def predict_brand_size(req: BrandSizingRequest):
+    from app.services.brand_sizing_service import predict_brand_specific_size
+    size = predict_brand_specific_size(req.standard_size, req.brand, req.category)
+    return {"brand_specific_size": size}
