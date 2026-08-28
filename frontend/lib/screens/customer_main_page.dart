@@ -59,7 +59,13 @@ class _CustomerMainPageState extends State<CustomerMainPage> {
     if (permission == LocationPermission.deniedForever) return;
 
     try {
-      Position pos = await Geolocator.getCurrentPosition();
+      Position? pos = await Geolocator.getLastKnownPosition();
+      pos ??= await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 3),
+        ),
+      );
       String name = widget.customerEmail.split('@')[0];
 
       await MonitoringApiService.startMonitoring(
@@ -70,16 +76,21 @@ class _CustomerMainPageState extends State<CustomerMainPage> {
         alt: pos.altitude,
       );
 
-      _heartbeatTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      _heartbeatTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
         try {
-          Position currentPos = await Geolocator.getCurrentPosition();
+          Position currentPos = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.bestForNavigation,
+              timeLimit: Duration(seconds: 2),
+            ),
+          );
           await MonitoringApiService.updateMonitoring(
             customerId: widget.customerEmail,
             lat: currentPos.latitude,
             lon: currentPos.longitude,
             alt: currentPos.altitude,
           );
-          debugPrint('📍 GPS Heartbeat sent from background main page! Lat: ${currentPos.latitude}');
+          debugPrint('📍 Instant GPS Heartbeat sent! Lat: ${currentPos.latitude}');
         } catch (e) {
           debugPrint('Failed to update location: $e');
         }
@@ -99,6 +110,7 @@ class _CustomerMainPageState extends State<CustomerMainPage> {
   Future<void> _requestHelp() async {
     try {
       await MonitoringApiService.requestManualAssistance(widget.customerEmail);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
@@ -115,6 +127,7 @@ class _CustomerMainPageState extends State<CustomerMainPage> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to request assistance: $e'),
@@ -197,7 +210,7 @@ class _CustomerMainPageState extends State<CustomerMainPage> {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppTheme.accentRed(isDark).withOpacity(0.4),
+                color: AppTheme.accentRed(isDark).withValues(alpha: 0.4),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),

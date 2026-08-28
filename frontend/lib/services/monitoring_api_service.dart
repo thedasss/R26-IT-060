@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class MonitoringApiService {
-  static const String baseUrl = "http://0.0.0.0:8000";
+  static const String baseUrl = "https://r26-it-060.onrender.com";
 
   static Future<Map<String, dynamic>> startMonitoring({
     required String customerId,
@@ -88,5 +88,17 @@ class MonitoringApiService {
       body: jsonEncode({"customer_id": customerId}),
     );
     return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> getZoneAnalytics() async {
+    try {
+      final response = await http
+          .get(Uri.parse("$baseUrl/monitoring/zone-analytics"))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (_) {}
+    return {"zones": [], "top_hot_zone": "None", "top_dead_zone": "None"};
   }
 }

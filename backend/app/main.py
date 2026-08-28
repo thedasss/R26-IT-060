@@ -1,3 +1,7 @@
+import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +16,16 @@ from app.routes import stylist
 
 app = FastAPI()
 
+from fastapi import Request
+from fastapi.responses import JSONResponse
+import traceback
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "traceback": traceback.format_exc()},
+    )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,6 +42,8 @@ app.include_router(product_routes.router)
 app.include_router(smart_inventory.router)
 app.include_router(stylist.router, prefix="/stylist", tags=["Stylist"])
 app.mount("/generated", StaticFiles(directory="generated"), name="generated")
+
+
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
